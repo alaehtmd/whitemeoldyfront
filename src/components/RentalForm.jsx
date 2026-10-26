@@ -11,8 +11,16 @@ export default function RentalForm({
   dresses,
   rentals,
   onSave,
+  onCreateClient,
   onClose,
 }) {
+  const [showNewClient, setShowNewClient] = useState(false)
+  const [newClient, setNewClient] = useState({
+    fullName: '',
+    phone: '',
+    notes: '',
+  })
+  const [savingNewClient, setSavingNewClient] = useState(false)
   const [form, setForm] = useState({
     clientId: '',
     dressId: '',
@@ -65,11 +73,39 @@ export default function RentalForm({
   const advance = Number(form.advance)
   const remaining = Math.max(0, price - advance)
 
+  async function handleCreateClient(event) {
+    event.preventDefault()
+
+    const fullName = newClient.fullName.trim()
+    const phone = newClient.phone.trim()
+
+    if (!fullName || !phone) {
+      window.alert('Renseigne le nom et le téléphone de la cliente.')
+      return
+    }
+
+    setSavingNewClient(true)
+
+    const created = await onCreateClient({
+      fullName,
+      phone,
+      notes: newClient.notes.trim(),
+    })
+
+    setSavingNewClient(false)
+
+    if (created) {
+      setForm((current) => ({ ...current, clientId: created.id }))
+      setShowNewClient(false)
+      setNewClient({ fullName: '', phone: '', notes: '' })
+    }
+  }
+
   function handleSubmit(event) {
     event.preventDefault()
 
-    if (!clients.length) {
-      window.alert('Ajoute d’abord une cliente.')
+    if (!form.clientId) {
+      window.alert('Choisis une cliente.')
       return
     }
 
@@ -164,8 +200,17 @@ export default function RentalForm({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-1.5 text-sm">
-            Cliente *
+          <div className="space-y-1.5 text-sm">
+            <div className="flex items-center justify-between">
+              <span>Cliente *</span>
+              <button
+                type="button"
+                onClick={() => setShowNewClient(true)}
+                className="rounded-lg bg-[#F8F5EF] px-2.5 py-1 text-xs font-medium hover:bg-[#EDE7DC]"
+              >
+                + Nouvelle cliente
+              </button>
+            </div>
             <select
               required
               value={form.clientId}
@@ -182,7 +227,7 @@ export default function RentalForm({
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
           <label className="space-y-1.5 text-sm">
             Robe *
@@ -310,6 +355,78 @@ export default function RentalForm({
           </label>
         </div>
 
+        {showNewClient && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4">
+            <form
+              onSubmit={handleCreateClient}
+              className="w-full max-w-md space-y-4 rounded-2xl bg-white p-5 shadow-xl"
+            >
+              <div className="flex items-center justify-between">
+                <h4 className="text-lg font-semibold">Nouvelle cliente</h4>
+                <button
+                  type="button"
+                  onClick={() => setShowNewClient(false)}
+                  aria-label="Fermer"
+                  className="rounded-lg p-2 hover:bg-[#F8F5EF]"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <label className="block space-y-1.5 text-sm">
+                <span>Nom complet *</span>
+                <input
+                  required
+                  autoFocus
+                  value={newClient.fullName}
+                  onChange={(e) => setNewClient((c) => ({ ...c, fullName: e.target.value }))}
+                  className="w-full rounded-xl border border-[#E8E3DA] px-3 py-3"
+                  placeholder="Ex. Sarah Amrani"
+                />
+              </label>
+
+              <label className="block space-y-1.5 text-sm">
+                <span>Téléphone *</span>
+                <input
+                  required
+                  type="tel"
+                  value={newClient.phone}
+                  onChange={(e) => setNewClient((c) => ({ ...c, phone: e.target.value }))}
+                  className="w-full rounded-xl border border-[#E8E3DA] px-3 py-3"
+                  placeholder="Ex. 0770 12 34 56"
+                />
+              </label>
+
+              <label className="block space-y-1.5 text-sm">
+                <span>Notes</span>
+                <textarea
+                  rows={2}
+                  value={newClient.notes}
+                  onChange={(e) => setNewClient((c) => ({ ...c, notes: e.target.value }))}
+                  className="w-full rounded-xl border border-[#E8E3DA] px-3 py-3"
+                />
+              </label>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowNewClient(false)}
+                  className="flex-1 rounded-xl border border-[#E8E3DA] px-4 py-3 text-sm"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingNewClient}
+                  className="flex-1 rounded-xl bg-[#302D29] px-4 py-3 text-sm text-white disabled:opacity-40"
+                >
+                  {savingNewClient ? 'Enregistrement…' : 'Enregistrer et sélectionner'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         <div className="mt-6 flex gap-3">
           <button
             type="button"
@@ -321,7 +438,7 @@ export default function RentalForm({
 
           <button
             type="submit"
-            disabled={!clients.length || !availableDresses.length}
+            disabled={!availableDresses.length}
             className="flex-1 rounded-xl bg-[#302D29] px-4 py-3 text-sm text-white disabled:opacity-40"
           >
             Enregistrer la location

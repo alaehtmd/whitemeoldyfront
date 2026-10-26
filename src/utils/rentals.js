@@ -39,10 +39,15 @@ export function hasRentalConflict(
       return false
     }
 
-    const existingEnd = rentalEnd(rental)
+  // Une robe louée le jour X est indisponible de X-1 à X+1 (24h avant
+  // et 24h après la location). Elle redevient disponible 2 jours après
+  // la fin (ex. louée le 2 nov. → indisponible du 1er au 3 nov.,
+  // disponible à partir du 4 nov.).
+  const bufferStart = addDays(rental.startDate, -1)
+  const existingEnd = addDays(rentalEnd(rental), 1)
 
-    return startDate <= existingEnd && dueDate >= rental.startDate
-  })
+  return startDate <= existingEnd && dueDate >= bufferStart
+})
 }
 
 export function getDressStatus(dressId, rentals, today = getLocalDate()) {
@@ -92,7 +97,9 @@ export function getNextAvailability(dressId, rentals, today = getLocalDate()) {
     if (booking.startDate <= candidate) {
       candidate = addDays(
         booking.dueDate > candidate ? booking.dueDate : candidate,
-        1,
+        // +2 : la robe est bloquée 24h après la fin de la location,
+        // donc redevient disponible 2 jours après la date de fin.
+        booking.dueDate > candidate ? 2 : 1,
       )
     } else {
       break

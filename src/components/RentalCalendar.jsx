@@ -1,7 +1,7 @@
 
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
-import { rentalEnd } from '../utils/rentals'
+import { rentalEnd, addDays } from '../utils/rentals'
 
 const pad = (value) => String(value).padStart(2, '0')
 
@@ -48,11 +48,15 @@ export default function RentalCalendar({ dresses, clients, rentals }) {
   const monthStart = `${month}-01`
   const monthEnd = `${month}-${pad(daysInMonth)}`
 
+  // Une location louée du jour X au jour Y occupe aussi la veille de X
+  // et le lendemain de Y (règle des 24h). On l'étend donc d'un jour
+  // de chaque côté, comme pour la disponibilité.
   const visibleRentals = rentals.filter((rental) => {
     if (rental.status === 'Annulée') return false
 
-    const end = rentalEnd(rental)
-    return rental.startDate <= monthEnd && end >= monthStart
+    const bufferedStart = addDays(rental.startDate, -1)
+    const bufferedEnd = addDays(rentalEnd(rental), 1)
+    return bufferedStart <= monthEnd && bufferedEnd >= monthStart
   })
 
   function showRental(rental) {
@@ -186,12 +190,13 @@ export default function RentalCalendar({ dresses, clients, rentals }) {
                       }}
                     >
                       {dressRentals.map((rental) => {
-                        const end = rentalEnd(rental)
+                        // Affichage étendu : veille de la sortie +
+                        // lendemain du retour (24h de marge).
+                        const start = addDays(rental.startDate, -1)
+                        const end = addDays(rentalEnd(rental), 1)
 
                         const visibleStart =
-                          rental.startDate < monthStart
-                            ? monthStart
-                            : rental.startDate
+                          start < monthStart ? monthStart : start
 
                         const visibleEnd =
                           end > monthEnd ? monthEnd : end
@@ -216,7 +221,7 @@ export default function RentalCalendar({ dresses, clients, rentals }) {
                             key={rental.id}
                             type="button"
                             onClick={() => showRental(rental)}
-                            title={`${client?.fullName || 'Cliente'} · ${formatDate(rental.startDate)} - ${formatDate(end)}`}
+                            title={`${client?.fullName || 'Cliente'} · ${formatDate(start)} - ${formatDate(end)} (indisponible) · Location ${formatDate(rental.startDate)} - ${formatDate(rentalEnd(rental))}`}
                             className="mx-0.5 truncate rounded-md bg-[#C9B18A] px-1 text-left text-[10px] font-medium text-white hover:bg-[#A98A5D]"
                             style={{
                               gridColumn: `${startDay} / ${endDay + 1}`,

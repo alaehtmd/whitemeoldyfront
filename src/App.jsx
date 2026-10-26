@@ -241,6 +241,32 @@ export default function App() {
     setEditingClient(null)
   }
 
+  // Création rapide de cliente depuis le formulaire de location.
+  // Retourne la cliente créée, ou null en cas d'échec / doublon.
+  async function quickCreateClient(form) {
+    const phone = form.phone.replace(/\s/g, '')
+
+    const duplicate = clients.find(
+      (client) => client.phone.replace(/\s/g, '') === phone,
+    )
+
+    if (duplicate) {
+      window.alert(
+        'Ce numéro existe déjà : la cliente existe dans le fichier. Sélectionne-la dans la liste.',
+      )
+      return null
+    }
+
+    try {
+      const created = await api.post('/clients', form)
+      setClients((current) => [...current, created])
+      return created
+    } catch (error) {
+      window.alert(error.message)
+      return null
+    }
+  }
+
   async function deleteClient(client) {
     if (rentals.some((rental) => rental.clientId === client.id)) {
       window.alert(
@@ -1016,6 +1042,7 @@ export default function App() {
       {rentalFormOpen && (
         <RentalForm
           clients={clients}
+          onCreateClient={quickCreateClient}
           dresses={catalogueDresses}
           rentals={rentals}
           onSave={saveRental}
